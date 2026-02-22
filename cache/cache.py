@@ -42,34 +42,6 @@ class Cache:
         if replacement=="PLRU":
             self.replacement = LRU()
             self.replacement.set_params(way,self.index_num,data_num)
-    # def set_params(self,
-    #                way,
-    #                total_size, line_size,
-    #                replacement,addr_size,data_size,isllc):
-    #     assert line_size%2==0,"Cacheline size is unalign!"
-    #     assert total_size%2==0,"Cacheline size is unalign!"
-    #     assert (data_size>>3)<=line_size, "Data size is too big,it must less than 64bits"
-    #     assert replacement=="PLRU"
-    #     self.isllc = isllc
-    #     self.way = way #way=0-> 全相连 way=-1 直接相连 way>1 组相联 
-    #     self.line_size  = line_size #byte
-    #     self.total_size = total_size #Kb
-    #     self.addr_size   = addr_size
-    #     self.data_size = data_size#bit
-    #     # self.backing_mem = backing_mem
-
-        
-
-
-    # def read_line(self,addr):
-    #     raddr  = (addr>>self.offset_bit)<<self.offset_bit
-    #     stride = self.data_size/8
-    #     data   = [0 for i in range(self.data_num)]
-    #     for i in range(self.data_num):
-
-    # def write_line(self,addr,data):
-        
-    
 
     def check_hit(self,tag,index):
         for row_index,row in enumerate(self.tagv):
@@ -185,9 +157,131 @@ class Cache:
             self.dirty[way][index] = True
 
 
+    def read_detail(self,addr):
+        tag     = addr>>(self.offset_bit+self.index_bit)
+        index   = (addr>>self.offset_bit)&((1<<(self.index_bit))-1)
+        temp = int ((addr&((1<<(self.offset_bit))-1)))
+        data_region = int(temp/(self.data_size/8))
+        hit,row = self.check_hit(tag,index)
+
+        result = {
+            'l1_hit': False, 'l1_evict_addr': None,
+            'l2_hit': False, 'l2_evict_addr': None,
+        }
+
+        if hit:
+            self.hit +=1
+            self.replacement.promotion(row)
+            result['l1_hit'] = True
+            result['data'] = self.data[row][index][data_region]
+            return result
+        else:
+            self.miss+=1
+            way=self.replacement.eviction()
+            self.replacement.insert(way)
+
+            # L1 被踢出的地址
+            old_tag = self.tagv[way][index]
+            if old_tag != 0xffffffff:
+                result['l1_evict_addr'] = (old_tag<<(self.offset_bit+self.index_bit)) + (index<<self.offset_bit)
+
+            self.tagv[way][index]=tag
+            if self.dirty[way][index]:
+                data =  self.data[way][index]
+                rep_tag  = self.tagv[way][index]
+                rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+                self.backing_mem.write_line(rep_addr,data)
+                self.dirty[way][index] = False
+
+            bk_tag   = addr>>(self.backing_mem.offset_bit+self.backing_mem.index_bit)
+            bk_index = (addr>>self.backing_mem.offset_bit)&((1<<(self.backing_mem.index_bit))-1)
+            bk_hit,bk_row = self.backing_mem.check_hit(bk_tag,bk_index)
+
+            if (~bk_hit):
+                bk_rep_way = self.backing_mem.replacement.eviction()
+                bk_rep_tag   = self.backing_mem.tagv[bk_rep_way][bk_index]
+                bk_rep_addr = (bk_rep_tag<<(self.backing_mem.offset_bit+self.backing_mem.index_bit)) + index<<self.backing_mem.offset_bit
+                bk2ts_tag = bk_rep_addr>>(self.offset_bit+self.index_bit)
+                bk2ts_index   = (bk_rep_addr>>self.offset_bit)&((1<<(self.index_bit))-1)
+                hit,row = self.check_hit(bk2ts_tag,bk2ts_index)
+                if self.dirty[row][bk2ts_index]:
+                    bk_dirty_data = self.data[row][bk2ts_index]
+                    self.backing_mem.write_line(bk_rep_addr,bk_dirty_data)
+                    self.dirty[row][bk2ts_index] = False
+                self.tagv[row][index]=0xffffffff
+
+            data, l2_info = self.backing_mem.read_line_detail(addr)
+            result['l2_hit'] = l2_info['hit']
+            result['l2_evict_addr'] = l2_info['evict_addr']
+            self.data[way][index] = data
+            result['data'] = data[data_region]
+            return result
+
+    def write_detail(self,addr,data):
+        tag     = addr>>(self.offset_bit+self.index_bit)
+        index   = (addr>>self.offset_bit)&((1<<(self.index_bit))-1)
+        temp = int ((addr&((1<<(self.offset_bit))-1)))
+        data_region = int(temp/(self.data_size/8))
+        hit, row = self.check_hit(tag,index)
+
+        result = {
+            'l1_hit': False, 'l1_evict_addr': None,
+            'l2_hit': False, 'l2_evict_addr': None,
+        }
+
+        if hit :
+            self.hit+=1
+            self.data[row][index][data_region] =  data
+            self.dirty[row][index] = True
+            self.replacement.promotion(row)
+            result['l1_hit'] = True
+            return result
+        else :
+            self.miss +=1
+            way = self.replacement.eviction()
+
+            # L1 被踢出的地址
+            old_tag = self.tagv[way][index]
+            if old_tag != 0xffffffff:
+                result['l1_evict_addr'] = (old_tag<<(self.offset_bit+self.index_bit)) + (index<<self.offset_bit)
+
+            if self.dirty[way][index]:
+                wdata =  self.data[way][index]
+                rep_tag  = self.tagv[way][index]
+                rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+                self.backing_mem.write_line(rep_addr,wdata)
+                self.dirty[way][index] = False
+
+            bk_tag   = addr>>(self.backing_mem.offset_bit+self.backing_mem.index_bit)
+            bk_index = (addr>>self.backing_mem.offset_bit)&((1<<(self.backing_mem.index_bit))-1)
+            bk_hit,bk_row = self.backing_mem.check_hit(bk_tag,bk_index)
+
+            if (~bk_hit):
+                bk_rep_way = self.backing_mem.replacement.eviction()
+                bk_rep_tag   = self.backing_mem.tagv[bk_rep_way][bk_index]
+                bk_rep_addr = (bk_rep_tag<<(self.backing_mem.offset_bit+self.backing_mem.index_bit)) + index<<self.backing_mem.offset_bit
+                bk2ts_tag = bk_rep_addr>>(self.offset_bit+self.index_bit)
+                bk2ts_index   = (bk_rep_addr>>self.offset_bit)&((1<<(self.index_bit))-1)
+                hit,row = self.check_hit(bk2ts_tag,bk2ts_index)
+                if self.dirty[row][bk2ts_index]:
+                    bk_dirty_data = self.data[row][bk2ts_index]
+                    self.backing_mem.write_line(bk_rep_addr,bk_dirty_data)
+                    self.dirty[row][bk2ts_index] = False
+                self.tagv[row][index]=0xffffffff
+
+            bk_data, l2_info = self.backing_mem.read_line_detail(addr)
+            result['l2_hit'] = l2_info['hit']
+            result['l2_evict_addr'] = l2_info['evict_addr']
+            self.data[way][index]              = bk_data
+            self.data[way][index][data_region] = data
+            self.replacement.insert(way)
+            self.tagv[way][index] = tag
+            self.dirty[way][index] = True
+            return result
+
     def print_info(self):
         return self.miss,self.hit
-    
+
 class L1Cache(Cache):
     def __init__(self,
                    way,
@@ -227,12 +321,54 @@ class L2Cache(Cache):
             rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
             self.tagv[way][index]=tag
             data = self.backing_mem.read_line(addr)
-            self.data[way][index] = data 
+            self.data[way][index] = data
             return data
 
+    def read_line_detail(self,addr):
+        tag     = addr>>(self.offset_bit+self.index_bit)
+        index   = (addr>>self.offset_bit)&((1<<(self.index_bit))-1)
+        hit,row = self.check_hit(tag,index)
+        info = {'hit': False, 'evict_addr': None}
+        if hit:
+            self.hit +=1
+            self.replacement.promotion(row)
+            info['hit'] = True
+            return self.data[row][index], info
+        else:
+            self.miss+=1
+            way=self.replacement.eviction()
+            self.replacement.insert(way)
+            rep_tag  = self.tagv[way][index]
+            rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+            if rep_tag != 0xffffffff:
+                info['evict_addr'] = rep_addr
+            self.tagv[way][index]=tag
+            data = self.backing_mem.read_line(addr)
+            self.data[way][index] = data
+            return data, info
+
+    def write_line_detail(self,addr,data):
+        tag     = addr>>(self.offset_bit+self.index_bit)
+        index   = (addr>>self.offset_bit)&((1<<(self.index_bit))-1)
+        hit,row = self.check_hit(tag,index)
+        info = {'hit': False, 'evict_addr': None}
+        if hit:
+            self.hit +=1
+            self.replacement.promotion(row)
+            info['hit'] = True
+        else:
+            self.miss+=1
+            way=self.replacement.eviction()
+            self.replacement.insert(way)
+            rep_tag  = self.tagv[way][index]
+            rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+            if rep_tag != 0xffffffff:
+                info['evict_addr'] = rep_addr
+            self.tagv[way][index]=tag
+            self.backing_mem.write_line(addr)
+        return info
 
     def write_line(self,addr,data):
-        
         tag     = addr>>(self.offset_bit+self.index_bit)
         index   = (addr>>self.offset_bit)&((1<<(self.index_bit))-1)
         hit,row = self.check_hit(tag,index)

@@ -6,7 +6,7 @@
 Typical usage  
 ![alt text](./img/image.png)
 
-```$  python  test.py -c ./utlis/scale.cfg```  
+```$  python test.py -c ./utlis/scale.cfg```  
 You can use the cfg file to config the cache parameters
 
 ### *Peculiarity*

@@ -2,7 +2,6 @@ import argparse
 import os
 import configparser as cp
 from memsim import MemSim
-# from cache import Cache
 
 
 if __name__ == '__main__':
@@ -27,7 +26,6 @@ if __name__ == '__main__':
     config.read(config_file)
 
     section = 'scratchpad_architecture_presets'
-
     bank_num = int(config.get(section, 'Bank Num'))
     bank_row = int(config.get(section, 'Bank Row per bank'))
     dim = int(config.get(section, 'Dim'))
@@ -51,7 +49,7 @@ if __name__ == '__main__':
     sim = MemSim()
     sim.set_params(bank_num, bank_row, dim, data_size, 
                    l1_way, l1_size, l1_cacheline_size, l1_replacement, 32, l1_data_size, 
-                   l1_way, l1_size, l1_cacheline_size, l1_replacement, l1_data_size)
+                   l2_way, l2_size, l2_cacheline_size, l2_replacement, l2_data_size)
     
     # SPM Test
     for i in range(0, 0x10000, 0x4):
