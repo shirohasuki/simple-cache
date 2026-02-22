@@ -4,9 +4,9 @@
 ### *Installing the package*
 
 Typical usage  
-![alt text](./image/image.png)
+![alt text](./img/image.png)
 
-```$  python  test.py -c ./scale.cfg```  
+```$  python  test.py -c ./utlis/scale.cfg```  
 You can use the cfg file to config the cache parameters
 
 ### *Peculiarity*

@@ -52,10 +52,13 @@ if __name__ == '__main__':
     sim.set_params(bank_num, bank_row, dim, data_size, 
                    l1_way, l1_size, l1_cacheline_size, l1_replacement, 32, l1_data_size, 
                    l1_way, l1_size, l1_cacheline_size, l1_replacement, l1_data_size)
+    
+    # SPM Test
     for i in range(0, 0x10000, 0x4):
         sim.spm_read(i)
     sim.print_info()
     
+    # L1 Cache Test
     for i in range(0, 0x10000, 0x4):
         sim.cache_read(i)
     # sim.cache_read(0)
