@@ -55,6 +55,6 @@ class Scratchpad:
 
         l2_infos = []
         for i in range(req_num):
-            info = self.backing_mem.write_line_detail(wdata[i],addr)
+            info = self.backing_mem.write_line_detail(addr,wdata[i])
             l2_infos.append(info)
         return l2_infos

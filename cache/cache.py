@@ -71,7 +71,7 @@ class Cache:
             if self.dirty[way][index]:
                 data =  self.data[way][index]
                 rep_tag  = self.tagv[way][index]
-                rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+                rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + (index<<self.offset_bit)
                 self.backing_mem.write_line(rep_addr,data)
                 self.dirty[way][index] = False
 
@@ -85,7 +85,7 @@ class Cache:
             if (~bk_hit):
                 bk_rep_way = self.backing_mem.replacement.eviction()
                 bk_rep_tag   = self.backing_mem.tagv[bk_rep_way][bk_index]
-                bk_rep_addr = (bk_rep_tag<<(self.backing_mem.offset_bit+self.backing_mem.index_bit)) + index<<self.backing_mem.offset_bit 
+                bk_rep_addr = (bk_rep_tag<<(self.backing_mem.offset_bit+self.backing_mem.index_bit)) + (index<<self.backing_mem.offset_bit) 
                 #将下级cache索引改为本级的索引
                 bk2ts_tag = bk_rep_addr>>(self.offset_bit+self.index_bit)
                 bk2ts_index   = (bk_rep_addr>>self.offset_bit)&((1<<(self.index_bit))-1)                
@@ -124,7 +124,7 @@ class Cache:
             if self.dirty[way][index]:
                 wdata =  self.data[way][index]
                 rep_tag  = self.tagv[way][index]
-                rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+                rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + (index<<self.offset_bit)
                 self.backing_mem.write_line(rep_addr,wdata)
                 self.dirty[way][index] = False
                 # assert miss==False
@@ -137,7 +137,7 @@ class Cache:
             if (~bk_hit):
                 bk_rep_way = self.backing_mem.replacement.eviction()
                 bk_rep_tag   = self.backing_mem.tagv[bk_rep_way][bk_index]
-                bk_rep_addr = (bk_rep_tag<<(self.backing_mem.offset_bit+self.backing_mem.index_bit)) + index<<self.backing_mem.offset_bit 
+                bk_rep_addr = (bk_rep_tag<<(self.backing_mem.offset_bit+self.backing_mem.index_bit)) + (index<<self.backing_mem.offset_bit) 
                 #将下级cache索引改为本级的索引
                 bk2ts_tag = bk_rep_addr>>(self.offset_bit+self.index_bit)
                 bk2ts_index   = (bk_rep_addr>>self.offset_bit)&((1<<(self.index_bit))-1)                
@@ -189,7 +189,7 @@ class Cache:
             if self.dirty[way][index]:
                 data =  self.data[way][index]
                 rep_tag  = self.tagv[way][index]
-                rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+                rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + (index<<self.offset_bit)
                 self.backing_mem.write_line(rep_addr,data)
                 self.dirty[way][index] = False
 
@@ -200,7 +200,7 @@ class Cache:
             if (~bk_hit):
                 bk_rep_way = self.backing_mem.replacement.eviction()
                 bk_rep_tag   = self.backing_mem.tagv[bk_rep_way][bk_index]
-                bk_rep_addr = (bk_rep_tag<<(self.backing_mem.offset_bit+self.backing_mem.index_bit)) + index<<self.backing_mem.offset_bit
+                bk_rep_addr = (bk_rep_tag<<(self.backing_mem.offset_bit+self.backing_mem.index_bit)) + (index<<self.backing_mem.offset_bit)
                 bk2ts_tag = bk_rep_addr>>(self.offset_bit+self.index_bit)
                 bk2ts_index   = (bk_rep_addr>>self.offset_bit)&((1<<(self.index_bit))-1)
                 hit,row = self.check_hit(bk2ts_tag,bk2ts_index)
@@ -248,7 +248,7 @@ class Cache:
             if self.dirty[way][index]:
                 wdata =  self.data[way][index]
                 rep_tag  = self.tagv[way][index]
-                rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+                rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + (index<<self.offset_bit)
                 self.backing_mem.write_line(rep_addr,wdata)
                 self.dirty[way][index] = False
 
@@ -259,7 +259,7 @@ class Cache:
             if (~bk_hit):
                 bk_rep_way = self.backing_mem.replacement.eviction()
                 bk_rep_tag   = self.backing_mem.tagv[bk_rep_way][bk_index]
-                bk_rep_addr = (bk_rep_tag<<(self.backing_mem.offset_bit+self.backing_mem.index_bit)) + index<<self.backing_mem.offset_bit
+                bk_rep_addr = (bk_rep_tag<<(self.backing_mem.offset_bit+self.backing_mem.index_bit)) + (index<<self.backing_mem.offset_bit)
                 bk2ts_tag = bk_rep_addr>>(self.offset_bit+self.index_bit)
                 bk2ts_index   = (bk_rep_addr>>self.offset_bit)&((1<<(self.index_bit))-1)
                 hit,row = self.check_hit(bk2ts_tag,bk2ts_index)
@@ -318,7 +318,7 @@ class L2Cache(Cache):
             way=self.replacement.eviction()
             self.replacement.insert(way)
             rep_tag  = self.tagv[way][index]
-            rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+            rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + (index<<self.offset_bit)
             self.tagv[way][index]=tag
             data = self.backing_mem.read_line(addr)
             self.data[way][index] = data
@@ -339,7 +339,7 @@ class L2Cache(Cache):
             way=self.replacement.eviction()
             self.replacement.insert(way)
             rep_tag  = self.tagv[way][index]
-            rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+            rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + (index<<self.offset_bit)
             if rep_tag != 0xffffffff:
                 info['evict_addr'] = rep_addr
             self.tagv[way][index]=tag
@@ -361,11 +361,11 @@ class L2Cache(Cache):
             way=self.replacement.eviction()
             self.replacement.insert(way)
             rep_tag  = self.tagv[way][index]
-            rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+            rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + (index<<self.offset_bit)
             if rep_tag != 0xffffffff:
                 info['evict_addr'] = rep_addr
             self.tagv[way][index]=tag
-            self.backing_mem.write_line(addr)
+            self.backing_mem.write_line(addr,data)
         return info
 
     def write_line(self,addr,data):
@@ -381,6 +381,6 @@ class L2Cache(Cache):
             way=self.replacement.eviction()
             self.replacement.insert(way)
             rep_tag  = self.tagv[way][index]
-            rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + index<<self.offset_bit
+            rep_addr = (rep_tag<<(self.offset_bit+self.index_bit)) + (index<<self.offset_bit)
             self.tagv[way][index]=tag
-            self.backing_mem.write_line(addr)
+            self.backing_mem.write_line(addr,data)
